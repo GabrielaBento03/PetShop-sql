@@ -34,4 +34,4 @@ Project developed in partnership by:
 
 Gabriela Bento de Oliveira
 
-Eduarda Liz
+Eduarda Silva de Liz
