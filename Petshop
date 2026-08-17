@@ -1,0 +1,131 @@
+create database petshop;
+use petshop;
+
+create table cliente (
+id_cliente int primary key, 
+nome varchar(100) not null,
+idade int,
+endereco varchar(100),
+telefone varchar(100)
+);
+
+create table produto (
+id_produto int primary key,
+nome_produto varchar(100) not null,
+categoria varchar(100),
+quantidade_estoque int,
+preco float 
+);
+
+create table pedido (
+id_pedido int primary key,
+id_cliente int,
+data_pedido date,
+forma_pagamento varchar(50),
+entrega boolean,
+
+foreign key (id_cliente) references cliente(id_cliente)
+);
+
+create table item_pedido (
+id_item int primary key,
+id_produto int,
+id_pedido int,
+quantidade int not null,
+valor_unitario float not null, 
+
+foreign key (id_produto) references produto(id_produto),
+foreign key (id_pedido) references pedido(id_pedido)
+);
+
+insert into cliente values 
+(1, "Eduarda Silva de Liz", 25, "Sapucaia do Sul, RS", "51 9 9999-9999"),
+(2, "Gabriela Bento de Oliveira", 24, "Sapucaia do Sul, RS", "51 9 9999-9998"),
+(3, "Fulano Cardoso", 35, "Porto Alegre, RS", "51 9 9999-9997"),
+(4, "Ciclano Silva", 18, "Santa Cruz, RS", "55 9 9999-9996"),
+(5, "Beltrano Ferreira", 28, "Porto Alegre, RS", "51 9 9999-9995");
+
+insert into produto values 
+(1, "Escova para pelos - gatos", "Higiene", 5, 25.50),
+(2, "Bola de tenis", "Brinquedo", 8, 5.10),
+(3, "Anti-pulgas", "Medicação", 3, 80.20),
+(4, "Urso de Pelúcia", "Brinquedo", 6, 10.00),
+(5, "Shampoo para cachorro", "Higiene", 10, 15.50),
+(6, "Anti-carrapatos", "Medicação", 5, 50.00);
+
+insert into pedido values 
+(1, 4, '2026-06-26', "Pix", false),
+(2, 2, '2026-05-06', "Débito", false),
+(3, 1, '2025-09-11', "Crédito", true),
+(4, 1, '2025-05-06', "Pix", true),
+(5, 2, '2024-11-25', "Débito", false),
+(6, 2, '2024-01-25', "Crédito", true);
+
+INSERT INTO item_pedido VALUES 
+(1, 1, 1, 2, 25.50),
+(2, 2, 2, 1, 5.10),
+(3, 3, 3, 1, 80.20),
+(4, 4, 4, 3, 10.00),
+(5, 5, 5, 2, 15.50);
+
+select * from cliente;
+
+select * from produto where quantidade_estoque>=5 order by categoria asc;
+
+SELECT 
+c.nome AS nome_cliente,
+p.data_pedido AS data,
+pr.nome_produto AS produto,
+i.quantidade AS quantidade_item
+FROM cliente AS c
+INNER JOIN pedido AS p ON c.id_cliente = p.id_cliente
+INNER JOIN item_pedido AS i ON p.id_pedido = i.id_pedido
+LEFT JOIN produto AS pr ON i.id_produto = pr.id_produto;
+
+/*
+COMENTÁRIOS SQL:
+
+1) Tabela base: 'cliente'. 
+   Foi escolhida como base para garantir que possamos identificar todos os 
+   clientes, mesmo aqueles que ainda não realizaram pedidos.
+
+2) Tabela protegida pelo LEFT JOIN: 'produto'.
+   A tabela 'produto' foi conectada via LEFT JOIN.
+
+3) Por que essa estratégia:
+   O LEFT JOIN garante que, caso algum item registrado no pedido não tenha 
+   um produto correspondente na tabela 'produto' (devido a uma exclusão ou erro 
+   de integridade), o registro do pedido não seja omitido do relatório, permitindo 
+   que o administrador identifique falhas na base de dados.
+*/
+
+
+SELECT c.nome AS nome_cliente, 
+SUM(i.quantidade * i.valor_unitario) AS valor_total_gasto FROM cliente AS c 
+INNER JOIN pedido AS p ON c.id_cliente = p.id_cliente 
+INNER JOIN item_pedido AS i ON p.id_pedido = i.id_pedido 
+GROUP BY c.id_cliente 
+HAVING SUM(i.quantidade * i.valor_unitario) > 0; 
+
+create view vw_relatorio_final as
+select
+    c.id_cliente as codigo_cliente,
+    c.nome as nome_cliente,
+    count(distinct p.id_pedido) as total_pedidos,
+    sum(i.quantidade) as total_itens_comprados,
+    sum(i.quantidade * i.valor_unitario) as valor_total_gasto
+from cliente as c
+inner join pedido as p
+    on c.id_cliente = p.id_cliente
+inner join  item_pedido as i
+    on p.id_pedido = i.id_pedido
+left join produto as pr
+    on i.id_produto = pr.id_produto
+group by
+    c.id_cliente, c.nome having sum(i.quantidade * i.valor_unitario) > 0;
+
+
+select * from vw_relatorio_final; 
+
+update cliente set nome = "Eduarda Liz" where id_cliente = 1;
+update cliente set nome = "Gabriela Bento" where id_cliente =2;
